@@ -8,14 +8,18 @@ import { safeNum } from '@/lib/metrics';
 
 export default function CreativeGrid({ rows, loading }) {
   const [selectedRow, setSelectedRow] = useState(null);
-  const [onlyWithSpend, setOnlyWithSpend] = useState(true);
+  const [onlyActive, setOnlyActive] = useState(true);
 
-  // Filter rows where investimento > R$ 1.00 when onlyWithSpend is enabled
+  // Filter rows where status is strictly 'ACTIVE' AND investimento > R$ 1.00 when onlyActive is enabled
   const filteredRows = useMemo(() => {
     if (!rows) return [];
-    if (!onlyWithSpend) return rows;
-    return rows.filter((row) => safeNum(row.investimento) > 1);
-  }, [rows, onlyWithSpend]);
+    if (!onlyActive) return rows;
+    return rows.filter((row) => {
+      const isActiveStatus = String(row.status || '').toUpperCase() === 'ACTIVE';
+      const hasSpend = safeNum(row.investimento) > 1;
+      return isActiveStatus && hasSpend;
+    });
+  }, [rows, onlyActive]);
 
   if (loading) {
     return (
@@ -59,26 +63,26 @@ export default function CreativeGrid({ rows, loading }) {
           <h2 className="text-base font-bold text-slate-900">Performance dos Criativos</h2>
           <p className="text-sm text-slate-500 mt-0.5">
             {filteredRows.length}{' '}
-            {filteredRows.length === 1 ? 'criativo' : 'criativos'}{' '}
-            {onlyWithSpend ? 'com veiculação (> R$ 1,00)' : 'no período'}
+            {filteredRows.length === 1 ? 'criativo ativo' : 'criativos ativos'}{' '}
+            {onlyActive ? 'com veiculação (> R$ 1,00)' : 'no período'}
           </p>
         </div>
 
-        {/* Filter button: toggle spend > R$ 1.00 */}
+        {/* Filter button: toggle active status & spend > R$ 1.00 */}
         <button
-          onClick={() => setOnlyWithSpend((v) => !v)}
+          onClick={() => setOnlyActive((v) => !v)}
           className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
-            onlyWithSpend
+            onlyActive
               ? 'bg-ocean-50 text-ocean-700 border-ocean-200 shadow-sm hover:bg-ocean-100'
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
           }`}
-          aria-pressed={onlyWithSpend}
+          aria-pressed={onlyActive}
         >
-          <Filter size={14} className={onlyWithSpend ? 'text-ocean-600' : 'text-slate-400'} />
-          <span>Com gastos (&gt; R$ 1,00)</span>
+          <Filter size={14} className={onlyActive ? 'text-ocean-600' : 'text-slate-400'} />
+          <span>Criativos Ativos (&gt; R$ 1,00)</span>
           <span
             className={`w-2 h-2 rounded-full ${
-              onlyWithSpend ? 'bg-ocean-500' : 'bg-slate-300'
+              onlyActive ? 'bg-ocean-500' : 'bg-slate-300'
             }`}
           />
         </button>
@@ -88,11 +92,11 @@ export default function CreativeGrid({ rows, loading }) {
       {!filteredRows || filteredRows.length === 0 ? (
         <div className="card p-8 text-center text-slate-500 text-sm space-y-3">
           <p className="font-medium text-slate-700">
-            Nenhum criativo encontrado {onlyWithSpend ? 'com gasto superior a R$ 1,00' : 'no período'}.
+            Nenhum criativo ativo com gasto superior a R$ 1,00 encontrado no período.
           </p>
-          {onlyWithSpend && (
+          {onlyActive && (
             <button
-              onClick={() => setOnlyWithSpend(false)}
+              onClick={() => setOnlyActive(false)}
               className="text-xs text-ocean-600 font-semibold hover:underline"
             >
               Exibir todos os criativos

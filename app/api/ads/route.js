@@ -42,7 +42,8 @@ export async function GET(request) {
         custo_por_lead,
         mensagens,
         custo_por_mensagem,
-        url_imagem
+        url_imagem,
+        status
       FROM public.dados_meta_ads_oeste
       WHERE
         ($1::date IS NULL OR data >= $1::date)

@@ -112,6 +112,18 @@ export default function CreativeDrawer({ row, onClose }) {
                 <span className="text-sm font-semibold text-slate-800 text-right max-w-[220px] truncate">{row.nome_anuncio}</span>
               </div>
             )}
+            {row.status && (
+              <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                <span className="text-sm text-slate-500 font-medium">Status</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                  String(row.status).toUpperCase() === 'ACTIVE'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {String(row.status).toUpperCase()}
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between py-2">
               <span className="text-sm text-slate-500 font-medium">Data</span>
               <span className="text-sm font-semibold text-slate-800">{formatDate(row.data)}</span>
