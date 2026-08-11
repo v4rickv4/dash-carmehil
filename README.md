@@ -234,3 +234,4 @@ CREATE TABLE dados_meta_ads_oeste (
 - Toda consulta SQL usa queries parametrizadas (`$1`, `$2`, …)
 - Erros internos são logados no servidor, nunca expostos ao browser
 - `.env.local` está no `.gitignore`
+# dash-oeste-marine
