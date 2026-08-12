@@ -236,9 +236,12 @@ export default function DashboardPage() {
                 />
               </section>
 
-              {/* ── Criativos ── */}
+              {/* ── Criativos (Fixo nas últimas 24h) ── */}
               <section id="criativos" aria-label="Performance dos criativos">
-                <CreativeGrid rows={rows} loading={loading} />
+                <CreativeGrid
+                  campaignFilter={filters.campaign}
+                  refreshTrigger={isRefreshing}
+                />
               </section>
             </>
           )}

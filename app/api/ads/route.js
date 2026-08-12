@@ -5,6 +5,7 @@ import { query } from '@/lib/db';
  * GET /api/ads
  *
  * Query parameters (all optional):
+ *   latestOnly YYYY-MM-DD  If 'true', returns records from MAX(data) (latest 24h)
  *   startDate  YYYY-MM-DD  Filter records from this date (inclusive)
  *   endDate    YYYY-MM-DD  Filter records up to this date (inclusive)
  *   campaign   string      Exact campaign name filter (nome_campanha)
@@ -16,46 +17,79 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const startDate = searchParams.get('startDate') || null;
-    const endDate   = searchParams.get('endDate')   || null;
-    const campaign  = searchParams.get('campaign')  || null;
-    const limitRaw  = searchParams.get('limit');
-    const limit     = limitRaw ? parseInt(limitRaw, 10) : null;
+    const latestOnly = searchParams.get('latestOnly') === 'true';
+    const startDate  = searchParams.get('startDate') || null;
+    const endDate    = searchParams.get('endDate')   || null;
+    const campaign   = searchParams.get('campaign')  || null;
+    const limitRaw   = searchParams.get('limit');
+    const limit      = limitRaw ? parseInt(limitRaw, 10) : null;
 
-    // All column names are lowercase — no quotes needed.
-    // Table is schema-qualified: public.dados_meta_ads_oeste
-    const sql = `
-      SELECT
-        id,
-        data,
-        id_anuncio,
-        nome_anuncio,
-        id_conjunto,
-        nome_conjunto,
-        id_campanha,
-        nome_campanha,
-        investimento,
-        impressoes,
-        alcance,
-        cliques,
-        leads,
-        custo_por_lead,
-        mensagens,
-        custo_por_mensagem,
-        url_imagem,
-        status
-      FROM public.dados_meta_ads_oeste
-      WHERE
-        ($1::date IS NULL OR data >= $1::date)
-        AND ($2::date IS NULL OR data <= $2::date)
-        AND ($3::text IS NULL OR nome_campanha = $3)
-      ORDER BY data DESC
-      ${limit ? 'LIMIT $4' : ''}
-    `;
+    let sql;
+    let params;
 
-    const params = limit
-      ? [startDate, endDate, campaign, limit]
-      : [startDate, endDate, campaign];
+    if (latestOnly) {
+      // Query only the most recent date in the database (last 24h)
+      sql = `
+        SELECT
+          id,
+          data,
+          id_anuncio,
+          nome_anuncio,
+          id_conjunto,
+          nome_conjunto,
+          id_campanha,
+          nome_campanha,
+          investimento,
+          impressoes,
+          alcance,
+          cliques,
+          leads,
+          custo_por_lead,
+          mensagens,
+          custo_por_mensagem,
+          url_imagem,
+          status
+        FROM public.dados_meta_ads_oeste
+        WHERE data = (SELECT MAX(data) FROM public.dados_meta_ads_oeste)
+          AND ($1::text IS NULL OR nome_campanha = $1)
+        ORDER BY investimento DESC
+        ${limit ? 'LIMIT $2' : ''}
+      `;
+      params = limit ? [campaign, limit] : [campaign];
+    } else {
+      // Standard query filtered by global date range
+      sql = `
+        SELECT
+          id,
+          data,
+          id_anuncio,
+          nome_anuncio,
+          id_conjunto,
+          nome_conjunto,
+          id_campanha,
+          nome_campanha,
+          investimento,
+          impressoes,
+          alcance,
+          cliques,
+          leads,
+          custo_por_lead,
+          mensagens,
+          custo_por_mensagem,
+          url_imagem,
+          status
+        FROM public.dados_meta_ads_oeste
+        WHERE
+          ($1::date IS NULL OR data >= $1::date)
+          AND ($2::date IS NULL OR data <= $2::date)
+          AND ($3::text IS NULL OR nome_campanha = $3)
+        ORDER BY data DESC
+        ${limit ? 'LIMIT $4' : ''}
+      `;
+      params = limit
+        ? [startDate, endDate, campaign, limit]
+        : [startDate, endDate, campaign];
+    }
 
     const result = await query(sql, params);
 

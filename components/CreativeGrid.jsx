@@ -1,25 +1,51 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Filter } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Sparkles } from 'lucide-react';
 import CreativeCard from './CreativeCard';
 import CreativeDrawer from './CreativeDrawer';
-import { safeNum } from '@/lib/metrics';
+import { groupByCreative } from '@/lib/metrics';
 
-export default function CreativeGrid({ rows, loading }) {
+export default function CreativeGrid({ campaignFilter, refreshTrigger }) {
   const [selectedRow, setSelectedRow] = useState(null);
-  const [onlyActive, setOnlyActive] = useState(true);
+  const [creativeRows, setCreativeRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Filter rows where status is strictly 'ACTIVE' AND investimento > R$ 1.00 when onlyActive is enabled
-  const filteredRows = useMemo(() => {
-    if (!rows) return [];
-    if (!onlyActive) return rows;
-    return rows.filter((row) => {
-      const isActiveStatus = String(row.status || '').toUpperCase() === 'ACTIVE';
-      const hasSpend = safeNum(row.investimento) > 1;
-      return isActiveStatus && hasSpend;
-    });
-  }, [rows, onlyActive]);
+  // Fetch latest 24h creatives data from DB (independent of global date range)
+  const fetchCreatives = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      params.set('latestOnly', 'true');
+      if (campaignFilter) params.set('campaign', campaignFilter);
+
+      const res = await fetch(`/api/ads?${params.toString()}`);
+      if (!res.ok) throw new Error('Erro ao carregar criativos');
+      const data = await res.json();
+      setCreativeRows(data.rows || []);
+    } catch (err) {
+      console.error('[CreativeGrid] fetch error:', err);
+      setError(err.message || 'Erro ao carregar criativos.');
+    } finally {
+      setLoading(false);
+    }
+  }, [campaignFilter]);
+
+  useEffect(() => {
+    fetchCreatives();
+  }, [fetchCreatives, refreshTrigger]);
+
+  // Group raw 24h rows by creative
+  const groupedCreatives = useMemo(() => {
+    return groupByCreative(creativeRows);
+  }, [creativeRows]);
+
+  // Always filter 24h creatives by investment > R$ 1.00 automatically behind the scenes
+  const filteredCreatives = useMemo(() => {
+    return groupedCreatives.filter((c) => c.investimento > 1.00);
+  }, [groupedCreatives]);
 
   if (loading) {
     return (
@@ -57,58 +83,41 @@ export default function CreativeGrid({ rows, loading }) {
 
   return (
     <div className="space-y-5">
-      {/* Section Header & Filter Toolbar */}
+      {/* Section Header & Permanent Status Badge */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-slate-900">Performance dos Criativos</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            {filteredRows.length}{' '}
-            {filteredRows.length === 1 ? 'criativo ativo' : 'criativos ativos'}{' '}
-            {onlyActive ? 'com veiculação (> R$ 1,00)' : 'no período'}
+            {filteredCreatives.length}{' '}
+            {filteredCreatives.length === 1 ? 'criativo em veiculação' : 'criativos em veiculação'}{' '}
+            nas últimas 24h
           </p>
         </div>
 
-        {/* Filter button: toggle active status & spend > R$ 1.00 */}
-        <button
-          onClick={() => setOnlyActive((v) => !v)}
-          className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
-            onlyActive
-              ? 'bg-ocean-50 text-ocean-700 border-ocean-200 shadow-sm hover:bg-ocean-100'
-              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-          }`}
-          aria-pressed={onlyActive}
-        >
-          <Filter size={14} className={onlyActive ? 'text-ocean-600' : 'text-slate-400'} />
-          <span>Criativos Ativos (&gt; R$ 1,00)</span>
-          <span
-            className={`w-2 h-2 rounded-full ${
-              onlyActive ? 'bg-ocean-500' : 'bg-slate-300'
-            }`}
-          />
-        </button>
+        {/* Permanent active indicator badge (non-clickable) */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-ocean-50 text-ocean-700 border border-ocean-200/80 shadow-sm self-start sm:self-auto">
+          <Sparkles size={14} className="text-ocean-600" />
+          <span>Investimento &gt; R$ 1,00 (Últimas 24h)</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        </div>
       </div>
 
-      {/* Grid or Empty state */}
-      {!filteredRows || filteredRows.length === 0 ? (
-        <div className="card p-8 text-center text-slate-500 text-sm space-y-3">
+      {error ? (
+        <div className="card p-6 text-center text-red-500 text-sm">
+          {error}
+        </div>
+      ) : !filteredCreatives || filteredCreatives.length === 0 ? (
+        <div className="card p-8 text-center text-slate-500 text-sm">
           <p className="font-medium text-slate-700">
-            Nenhum criativo ativo com gasto superior a R$ 1,00 encontrado no período.
+            Nenhum criativo com gasto superior a R$ 1,00 encontrado nas últimas 24 horas.
           </p>
-          {onlyActive && (
-            <button
-              onClick={() => setOnlyActive(false)}
-              className="text-xs text-ocean-600 font-semibold hover:underline"
-            >
-              Exibir todos os criativos
-            </button>
-          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 section-animate">
-          {filteredRows.map((row) => (
+          {filteredCreatives.map((creative) => (
             <CreativeCard
-              key={row.id}
-              row={row}
+              key={creative.id}
+              row={creative}
               onOpenDrawer={setSelectedRow}
             />
           ))}
