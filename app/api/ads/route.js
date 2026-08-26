@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/ads
  *
@@ -11,7 +13,7 @@ import { query } from '@/lib/db';
  *   campaign   string      Exact campaign name filter (nome_campanha)
  *   limit      number      Max rows to return (default: no limit)
  *
- * Returns: JSON array of records from public.dados_meta_ads_oeste
+ * Returns: JSON array of records from public.dados_meta_ads_carmehil
  */
 export async function GET(request) {
   try {
@@ -49,8 +51,8 @@ export async function GET(request) {
           custo_por_mensagem,
           url_imagem,
           status
-        FROM public.dados_meta_ads_oeste
-        WHERE data = (SELECT MAX(data) FROM public.dados_meta_ads_oeste)
+        FROM public.dados_meta_ads_carmehil
+        WHERE data = (SELECT MAX(data) FROM public.dados_meta_ads_carmehil)
           AND ($1::text IS NULL OR nome_campanha = $1)
         ORDER BY investimento DESC
         ${limit ? 'LIMIT $2' : ''}
@@ -78,7 +80,7 @@ export async function GET(request) {
           custo_por_mensagem,
           url_imagem,
           status
-        FROM public.dados_meta_ads_oeste
+        FROM public.dados_meta_ads_carmehil
         WHERE
           ($1::date IS NULL OR data >= $1::date)
           AND ($2::date IS NULL OR data <= $2::date)

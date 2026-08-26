@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { RefreshCw, ChevronDown, Menu, Calendar } from 'lucide-react';
+import { RefreshCw, ChevronDown, Menu, Calendar, Share2, Globe, Layers } from 'lucide-react';
 
 const PERIOD_OPTIONS = [
   { value: 'today',      label: 'Hoje' },
@@ -12,11 +12,28 @@ const PERIOD_OPTIONS = [
   { value: 'custom',     label: 'Personalizado' },
 ];
 
-export default function Header({ period, onPeriodChange, onRefresh, isRefreshing, onMenuToggle }) {
+const PLATFORM_MAP = {
+  meta:   { label: 'Meta Ads', icon: Share2, subtitle: 'Facebook & Instagram' },
+  google: { label: 'Google Ads', icon: Globe, subtitle: 'Rede de Pesquisa, Display & PMax' },
+  all:    { label: 'Visão Consolidada', icon: Layers, subtitle: 'Meta Ads + Google Ads' },
+};
+
+export default function Header({
+  activePlatform = 'meta',
+  onPlatformChange,
+  period,
+  onPeriodChange,
+  onRefresh,
+  isRefreshing,
+  onMenuToggle,
+}) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const selectedLabel =
     PERIOD_OPTIONS.find((o) => o.value === period)?.label ?? 'Últimos 30 dias';
+
+  const platformInfo = PLATFORM_MAP[activePlatform] || PLATFORM_MAP.meta;
+  const PlatformIcon = platformInfo.icon;
 
   function handlePeriodSelect(value) {
     onPeriodChange(value);
@@ -25,12 +42,12 @@ export default function Header({ period, onPeriodChange, onRefresh, isRefreshing
 
   return (
     <header
-      className="sticky top-0 z-40 px-6 py-4 flex items-center justify-between gap-4 border-b border-slate-200/80"
+      className="sticky top-0 z-40 px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80"
       style={{
         background: 'linear-gradient(135deg, #0a1628 0%, #112a50 55%, #1a3a6b 100%)',
       }}
     >
-      {/* Left — hamburger + title */}
+      {/* Left — hamburger + title + platform badge */}
       <div className="flex items-center gap-4 min-w-0">
         {/* Mobile menu toggle */}
         <button
@@ -41,14 +58,53 @@ export default function Header({ period, onPeriodChange, onRefresh, isRefreshing
           <Menu size={20} />
         </button>
 
-        <div className="min-w-0">
-          <h1 className="text-white font-bold text-xl leading-tight truncate">
-            Dashboard de Performance
-          </h1>
-          <p className="text-blue-300/80 text-sm font-medium mt-0.5">
-            Meta Ads&nbsp;•&nbsp;Oeste Marine
-          </p>
+        <div className="min-w-0 flex items-center gap-3">
+          <div>
+            <h1 className="text-white font-bold text-xl leading-tight truncate">
+              Dashboard de Performance
+            </h1>
+            <p className="text-blue-300/80 text-xs sm:text-sm font-medium mt-0.5">
+              {platformInfo.label}&nbsp;•&nbsp;Carmehil
+            </p>
+          </div>
         </div>
+      </div>
+
+      {/* Center / Platform Switcher Quick Pills */}
+      <div className="hidden md:flex items-center p-1 rounded-xl bg-white/10 border border-white/15">
+        <button
+          onClick={() => onPlatformChange && onPlatformChange('meta')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            activePlatform === 'meta'
+              ? 'bg-blue-600 text-white shadow'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          <Share2 size={13} />
+          <span>Meta Ads</span>
+        </button>
+        <button
+          onClick={() => onPlatformChange && onPlatformChange('google')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            activePlatform === 'google'
+              ? 'bg-amber-500 text-slate-950 shadow font-bold'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          <Globe size={13} />
+          <span>Google Ads</span>
+        </button>
+        <button
+          onClick={() => onPlatformChange && onPlatformChange('all')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            activePlatform === 'all'
+              ? 'bg-purple-600 text-white shadow'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          <Layers size={13} />
+          <span>Consolidado</span>
+        </button>
       </div>
 
       {/* Right — period selector + refresh */}

@@ -1,6 +1,6 @@
-# Dashboard Meta Ads — Oeste Marine
+# Dashboard Meta Ads — Carmehil
 
-Painel de análise de performance das campanhas de **Meta Ads da Oeste Marine**.
+Painel de análise de performance das campanhas de **Meta Ads da Carmehil**.
 
 ## Funcionalidades
 
@@ -22,7 +22,7 @@ Painel de análise de performance das campanhas de **Meta Ads da Oeste Marine**.
 ```bash
 # Clone o repositório
 git clone <url-do-repo>
-cd dash-oeste--
+cd dash-carmehil
 
 # Instale as dependências
 npm install
@@ -44,7 +44,7 @@ Edite `.env.local`:
 DATABASE_URL=postgresql://usuario:senha@host:5432/database
 ```
 
-> A variável deve apontar para o banco PostgreSQL que contém a tabela `dados_meta_ads_oeste`.
+> A variável deve apontar para o banco PostgreSQL que contém a tabela `dados_meta_ads_carmehil`.
 
 ---
 
@@ -89,18 +89,15 @@ A resposta terá o formato:
     {
       "id": 1,
       "data": "2026-01-15T00:00:00.000Z",
-      "Campanha": "Nome da Campanha",
+      "nome_campanha": "Nome da Campanha",
       "id_campanha": "123456789",
-      "Investimento": "1500.00",
-      "Impressões": "45000",
-      "Alcance": "32000",
-      "Cliques": "780",
-      "Leads": "24",
-      "CPC": "1.92",
-      "CPM": "33.33",
-      "CTR": "1.73",
-      "Frequencia": "1.40",
-      "thumbnail_url": "https://..."
+      "investimento": "1500.00",
+      "impressoes": "45000",
+      "alcance": "32000",
+      "cliques": "780",
+      "leads": "24",
+      "custo_por_lead": "62.50",
+      "url_imagem": "https://..."
     }
   ]
 }
@@ -154,7 +151,7 @@ Na Vercel:
 ## Estrutura do projeto
 
 ```
-dash-oeste--/
+dash-carmehil/
 ├── app/
 │   ├── layout.js          # Root layout + Inter font + SEO
 │   ├── page.js            # Dashboard principal (Client Component)
@@ -195,21 +192,26 @@ dash-oeste--/
 ## Tabela PostgreSQL esperada
 
 ```sql
-CREATE TABLE dados_meta_ads_oeste (
-  id           SERIAL PRIMARY KEY,
-  data         DATE,
-  "Campanha"   TEXT,
-  id_campanha  TEXT,
-  "Investimento" NUMERIC,
-  "Impressões"   NUMERIC,
-  "Alcance"      NUMERIC,
-  "Cliques"      NUMERIC,
-  "Leads"        NUMERIC,
-  "CPC"          NUMERIC,
-  "CPM"          NUMERIC,
-  "CTR"          NUMERIC,
-  "Frequencia"   NUMERIC,
-  thumbnail_url  TEXT
+CREATE TABLE dados_meta_ads_carmehil (
+  id                 SERIAL PRIMARY KEY,
+  data               DATE,
+  id_anuncio         VARCHAR,
+  nome_anuncio       VARCHAR,
+  id_conjunto        VARCHAR,
+  nome_conjunto      VARCHAR,
+  id_campanha        VARCHAR,
+  nome_campanha      VARCHAR,
+  investimento       NUMERIC,
+  impressoes         INTEGER,
+  alcance            INTEGER,
+  cliques            INTEGER,
+  leads              NUMERIC,
+  custo_por_lead     NUMERIC,
+  mensagens          NUMERIC,
+  custo_por_mensagem NUMERIC,
+  url_imagem         TEXT,
+  status             VARCHAR,
+  atualized_em       TIMESTAMP
 );
 ```
 
@@ -234,4 +236,4 @@ CREATE TABLE dados_meta_ads_oeste (
 - Toda consulta SQL usa queries parametrizadas (`$1`, `$2`, …)
 - Erros internos são logados no servidor, nunca expostos ao browser
 - `.env.local` está no `.gitignore`
-# dash-oeste-marine
+# dash-carmehil

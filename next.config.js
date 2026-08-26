@@ -4,6 +4,14 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'carmehil.com.br',
+      },
+      {
+        protocol: 'https',
+        hostname: 'carmehilnetwork.com.br',
+      },
+      {
+        protocol: 'https',
         hostname: 'oestemarine.com.br',
       },
       {

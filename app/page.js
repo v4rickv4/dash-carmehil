@@ -67,13 +67,16 @@ function getPeriodDates(period) {
 /* ─── Page ────────────────────────────────────────────── */
 export default function DashboardPage() {
   // ── UI state ──────────────────────────────────────────
-  const [activeSection, setActiveSection]   = useState('visao-geral');
-  const [sidebarOpen,   setSidebarOpen]     = useState(false);
+  const [activePlatform, setActivePlatform] = useState('meta'); // 'meta' | 'google' | 'all'
+  const [activeSection,  setActiveSection]  = useState('visao-geral');
+  const [sidebarOpen,    setSidebarOpen]    = useState(false);
 
   // ── Data state ────────────────────────────────────────
-  const [rows,        setRows]        = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState(null);
+  const [metaRows,     setMetaRows]     = useState([]);
+  const [googleRows,   setGoogleRows]   = useState([]);
+  const [googleAccounts, setGoogleAccounts] = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // ── Period + filters state ────────────────────────────
@@ -82,6 +85,7 @@ export default function DashboardPage() {
     startDate: '',
     endDate:   '',
     campaign:  '',
+    accountId: '',
     sortBy:    'investimento',
   });
 
@@ -99,54 +103,78 @@ export default function DashboardPage() {
     }
   }, [period, periodDates]);
 
-  /* ── Fetch ───────────────────────────────────────────── */
+  /* ── Fetch Data ──────────────────────────────────────── */
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setIsRefreshing(true);
     setError(null);
 
     try {
-      const params = new URLSearchParams();
-      if (filters.startDate) params.set('startDate', filters.startDate);
-      if (filters.endDate)   params.set('endDate',   filters.endDate);
-      if (filters.campaign)  params.set('campaign',  filters.campaign);
+      const metaParams = new URLSearchParams();
+      if (filters.startDate) metaParams.set('startDate', filters.startDate);
+      if (filters.endDate)   metaParams.set('endDate',   filters.endDate);
+      if (filters.campaign)  metaParams.set('campaign',  filters.campaign);
 
-      const res = await fetch(`/api/ads?${params.toString()}`);
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Erro ${res.status}`);
+      const googleParams = new URLSearchParams();
+      if (filters.startDate) googleParams.set('startDate', filters.startDate);
+      if (filters.endDate)   googleParams.set('endDate',   filters.endDate);
+      if (filters.campaign)  googleParams.set('campaign',  filters.campaign);
+      if (filters.accountId) googleParams.set('accountId', filters.accountId);
+
+      const requests = [];
+      if (activePlatform === 'meta' || activePlatform === 'all') {
+        requests.push(fetch(`/api/ads?${metaParams.toString()}`).then((r) => r.json()));
+      } else {
+        requests.push(Promise.resolve({ rows: [] }));
       }
 
-      const data = await res.json();
-      setRows(data.rows ?? []);
+      if (activePlatform === 'google' || activePlatform === 'all') {
+        requests.push(fetch(`/api/google-ads?${googleParams.toString()}`).then((r) => r.json()));
+      } else {
+        requests.push(Promise.resolve({ rows: [], accounts: [] }));
+      }
+
+      const [metaRes, googleRes] = await Promise.all(requests);
+
+      setMetaRows(metaRes.rows ?? []);
+      setGoogleRows(googleRes.rows ?? []);
+      if (googleRes.accounts && googleRes.accounts.length > 0) {
+        setGoogleAccounts(googleRes.accounts);
+      }
     } catch (err) {
       console.error('[Dashboard] Fetch error:', err);
-      setError(err.message || 'Erro ao carregar dados.');
+      setError(err.message || 'Erro ao carregar dados do dashboard.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [filters.startDate, filters.endDate, filters.campaign]);
+  }, [activePlatform, filters.startDate, filters.endDate, filters.campaign, filters.accountId]);
 
-  // Initial load + whenever date/campaign filter changes
+  // Load whenever activePlatform or filter changes
   useEffect(() => {
     fetchData(false);
   }, [fetchData]);
 
-  /* ── Derived data ────────────────────────────────────── */
-  const totals = useMemo(() => computeTotals(rows), [rows]);
+  /* ── Combined Rows based on Active Platform ─────────── */
+  const combinedRows = useMemo(() => {
+    if (activePlatform === 'meta') return metaRows;
+    if (activePlatform === 'google') return googleRows;
+    return [...metaRows, ...googleRows];
+  }, [activePlatform, metaRows, googleRows]);
+
+  /* ── Derived metrics ─────────────────────────────────── */
+  const totals = useMemo(() => computeTotals(combinedRows), [combinedRows]);
 
   const campaignGroups = useMemo(
-    () => sortCampaigns(groupByCampaign(rows), filters.sortBy),
-    [rows, filters.sortBy]
+    () => sortCampaigns(groupByCampaign(combinedRows), filters.sortBy),
+    [combinedRows, filters.sortBy]
   );
 
-  const campaignNames = useMemo(() => getCampaignNames(rows), [rows]);
+  const campaignNames = useMemo(() => getCampaignNames(combinedRows), [combinedRows]);
 
   /* ── Filter helpers ──────────────────────────────────── */
   function handleFiltersChange(newFilters) {
     setFilters(newFilters);
-    // If user manually edits dates, switch to 'custom' period label
     if (
       newFilters.startDate !== filters.startDate ||
       newFilters.endDate   !== filters.endDate
@@ -161,26 +189,34 @@ export default function DashboardPage() {
 
   function handleClearFilters() {
     setPeriod('30d');
-    setFilters({ startDate: '', endDate: '', campaign: '', sortBy: 'investimento' });
+    setFilters({ startDate: '', endDate: '', campaign: '', accountId: '', sortBy: 'investimento' });
+  }
+
+  function handlePlatformChange(platform) {
+    setActivePlatform(platform);
   }
 
   /* ── Render ──────────────────────────────────────────── */
-  const isEmpty = !loading && !error && rows.length === 0;
+  const isEmpty = !loading && !error && combinedRows.length === 0;
 
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Sidebar */}
       <Sidebar
+        activePlatform={activePlatform}
+        onPlatformChange={handlePlatformChange}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main */}
+      {/* Main Content */}
       <div className="main-content flex-1 flex flex-col min-w-0">
         {/* Header */}
         <Header
+          activePlatform={activePlatform}
+          onPlatformChange={handlePlatformChange}
           period={period}
           onPeriodChange={handlePeriodChange}
           onRefresh={() => fetchData(true)}
@@ -188,14 +224,16 @@ export default function DashboardPage() {
           onMenuToggle={() => setSidebarOpen(true)}
         />
 
-        {/* Filter bar */}
+        {/* Filter Bar */}
         <FilterBar
           filters={filters}
           onFiltersChange={handleFiltersChange}
           campaigns={campaignNames}
+          accounts={googleAccounts}
+          activePlatform={activePlatform}
         />
 
-        {/* Content area */}
+        {/* Content Area */}
         <main className="flex-1 p-4 sm:p-6 space-y-6 max-w-full overflow-hidden">
           {error ? (
             <ErrorState message={error} onRetry={() => fetchData(false)} />
@@ -205,12 +243,12 @@ export default function DashboardPage() {
             <>
               {/* ── KPI Grid ── */}
               <section id="visao-geral" aria-label="KPIs principais">
-                <KPIGrid totals={totals} loading={loading} />
+                <KPIGrid totals={totals} loading={loading} activePlatform={activePlatform} />
               </section>
 
               {/* ── Performance Chart ── */}
               <section id="performance" aria-label="Evolução de performance">
-                <PerformanceChart rows={rows} loading={loading} />
+                <PerformanceChart rows={combinedRows} loading={loading} />
               </section>
 
               {/* ── Investment Distribution ── */}
@@ -236,13 +274,15 @@ export default function DashboardPage() {
                 />
               </section>
 
-              {/* ── Criativos (Fixo nas últimas 24h) ── */}
-              <section id="criativos" aria-label="Performance dos criativos">
-                <CreativeGrid
-                  campaignFilter={filters.campaign}
-                  refreshTrigger={isRefreshing}
-                />
-              </section>
+              {/* ── Criativos (Fixo nas últimas 24h para Meta Ads / Plataforma) ── */}
+              {(activePlatform === 'meta' || activePlatform === 'all') && (
+                <section id="criativos" aria-label="Performance dos criativos">
+                  <CreativeGrid
+                    campaignFilter={filters.campaign}
+                    refreshTrigger={isRefreshing}
+                  />
+                </section>
+              )}
             </>
           )}
         </main>
@@ -250,7 +290,7 @@ export default function DashboardPage() {
         {/* Footer */}
         <footer className="px-6 py-4 border-t border-slate-200 mt-auto">
           <p className="text-xs text-slate-400 text-center">
-            Dashboard Meta Ads — Oeste Marine &copy; {new Date().getFullYear()}
+            Dashboard Meta Ads & Google Ads — Carmehil Network &copy; {new Date().getFullYear()}
           </p>
         </footer>
       </div>

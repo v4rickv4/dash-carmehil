@@ -1,16 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { X, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { X, SlidersHorizontal, ChevronDown, Building2 } from 'lucide-react';
 
 const SORT_OPTIONS = [
   { value: 'investimento', label: 'Maior investimento' },
   { value: 'leads',        label: 'Mais conversões' },
-  { value: 'cpl',          label: 'Menor CPL' },
+  { value: 'cpl',          label: 'Menor Custo/Conversão' },
   { value: 'cliques',      label: 'Mais cliques' },
 ];
 
-export default function FilterBar({ filters, onFiltersChange, campaigns }) {
+export default function FilterBar({
+  filters,
+  onFiltersChange,
+  campaigns = [],
+  accounts = [],
+  activePlatform = 'meta',
+}) {
   const [expanded, setExpanded] = useState(false);
 
   function update(key, value) {
@@ -22,11 +28,15 @@ export default function FilterBar({ filters, onFiltersChange, campaigns }) {
       startDate: '',
       endDate: '',
       campaign: '',
+      accountId: '',
       sortBy: 'investimento',
     });
   }
 
-  const hasActiveFilters = filters.startDate || filters.endDate || filters.campaign;
+  const hasActiveFilters =
+    filters.startDate || filters.endDate || filters.campaign || filters.accountId;
+
+  const showAccountFilter = accounts.length > 0 || activePlatform === 'google' || activePlatform === 'all';
 
   return (
     <div className="bg-white border-b border-slate-200">
@@ -46,6 +56,31 @@ export default function FilterBar({ filters, onFiltersChange, campaigns }) {
             className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
           />
         </button>
+
+        {/* Account Selector (Google Ads / Multi-Conta) */}
+        {showAccountFilter && (
+          <div className="flex items-center gap-2 max-w-full">
+            <div className="flex items-center gap-1 text-slate-500">
+              <Building2 size={14} className="text-amber-500" />
+              <label className="text-xs font-semibold whitespace-nowrap">ID Conta:</label>
+            </div>
+            <select
+              value={filters.accountId || ''}
+              onChange={(e) => update('accountId', e.target.value)}
+              className="filter-select text-sm px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50/40 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all font-medium max-w-[220px] truncate"
+            >
+              <option value="">Todas as Contas</option>
+              {accounts.map((acc) => (
+                <option key={acc.conta_id} value={acc.conta_id}>
+                  {acc.conta_id} {acc.conta_nome ? `(${acc.conta_nome})` : ''}
+                </option>
+              ))}
+              {accounts.length === 0 && (
+                <option value="849-204-1182">849-204-1182 (Carmehil Network)</option>
+              )}
+            </select>
+          </div>
+        )}
 
         {/* Date range - always visible */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">

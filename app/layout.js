@@ -1,11 +1,11 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Dashboard Meta Ads | Oeste Marine',
-  description: 'Painel de análise de performance das campanhas de Meta Ads da Oeste Marine. Acompanhe investimento, leads, CPL, CTR e muito mais.',
-  keywords: 'meta ads, oeste marine, dashboard, performance, campanhas, leads, marketing',
+  title: 'Dashboard Meta Ads | Carmehil',
+  description: 'Painel de análise de performance das campanhas de Meta Ads da Carmehil. Acompanhe investimento, leads, CPL, CTR e muito mais.',
+  keywords: 'meta ads, carmehil, dashboard, performance, campanhas, leads, marketing',
   openGraph: {
-    title: 'Dashboard Meta Ads | Oeste Marine',
+    title: 'Dashboard Meta Ads | Carmehil',
     description: 'Análise completa de performance das campanhas Meta Ads',
     type: 'website',
   },
