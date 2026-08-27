@@ -116,13 +116,19 @@ export async function GET(request) {
       rows: result.rows,
     });
   } catch (error) {
-    // Log full error server-side only — never expose internals to browser
-    console.error('[API /api/ads] Error:', error);
+    console.error('[API /api/ads] Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      hasEnvVar: Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL),
+    });
 
     return NextResponse.json(
       {
         success: false,
-        error: 'Não foi possível carregar os dados. Verifique a conexão com o banco de dados.',
+        error: error.message || 'Não foi possível carregar os dados. Verifique a conexão com o banco de dados.',
+        code: error.code || 'DATABASE_ERROR',
       },
       { status: 500 }
     );

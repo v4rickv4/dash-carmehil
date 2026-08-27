@@ -122,12 +122,19 @@ export async function GET(request) {
       keywords: keywordsRes.rows.map((r) => r.palavra_chave),
     });
   } catch (error) {
-    console.error('[API /api/google-ads] Error:', error);
+    console.error('[API /api/google-ads] Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      hasEnvVar: Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL),
+    });
 
     return NextResponse.json(
       {
         success: false,
-        error: 'Não foi possível carregar os dados do Google Ads.',
+        error: error.message || 'Não foi possível carregar os dados do Google Ads.',
+        code: error.code || 'DATABASE_ERROR',
       },
       { status: 500 }
     );

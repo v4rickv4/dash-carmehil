@@ -130,17 +130,26 @@ export default function DashboardPage() {
       if (filters.adGroup)   googleParams.set('adGroup',   filters.adGroup);
       if (filters.keyword)   googleParams.set('keyword',   filters.keyword);
 
+      const fetchEndpoint = async (url) => {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!res.ok || data.success === false) {
+          throw new Error(data.error || `Erro ${res.status}: Falha na requisição dos dados.`);
+        }
+        return data;
+      };
+
       const requests = [];
       if (activePlatform === 'meta' || activePlatform === 'all') {
-        requests.push(fetch(`/api/ads?${metaParams.toString()}`).then((r) => r.json()));
+        requests.push(fetchEndpoint(`/api/ads?${metaParams.toString()}`));
       } else {
-        requests.push(Promise.resolve({ rows: [] }));
+        requests.push(Promise.resolve({ success: true, rows: [] }));
       }
 
       if (activePlatform === 'google' || activePlatform === 'all') {
-        requests.push(fetch(`/api/google-ads?${googleParams.toString()}`).then((r) => r.json()));
+        requests.push(fetchEndpoint(`/api/google-ads?${googleParams.toString()}`));
       } else {
-        requests.push(Promise.resolve({ rows: [], accounts: [], adGroups: [], keywords: [] }));
+        requests.push(Promise.resolve({ success: true, rows: [], accounts: [], adGroups: [], keywords: [] }));
       }
 
       const [metaRes, googleRes] = await Promise.all(requests);
