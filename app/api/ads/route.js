@@ -24,8 +24,15 @@ export async function GET(request) {
     const latestOnly    = searchParams.get('latestOnly') === 'true';
     const level         = searchParams.get('level');
     const creativesOnly = searchParams.get('creativesOnly') === 'true' || level === 'creative' || latestOnly;
-    const startDate     = searchParams.get('startDate') || null;
-    const endDate       = searchParams.get('endDate')   || null;
+    const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+    const defaultStartDate = `${todayStr.slice(0, 7)}-01`;
+    const defaultEndDate   = todayStr;
+
+    const rawStartDate  = searchParams.get('startDate');
+    const rawEndDate    = searchParams.get('endDate');
+
+    const startDate     = (rawStartDate && rawStartDate.trim() !== '') ? rawStartDate.trim() : defaultStartDate;
+    const endDate       = (rawEndDate && rawEndDate.trim() !== '')     ? rawEndDate.trim()   : defaultEndDate;
     const campaign      = searchParams.get('campaign')  || null;
     const limitRaw      = searchParams.get('limit');
     const limit         = limitRaw ? parseInt(limitRaw, 10) : null;

@@ -30,7 +30,7 @@ export default function Header({
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const selectedLabel =
-    PERIOD_OPTIONS.find((o) => o.value === period)?.label ?? 'Últimos 30 dias';
+    PERIOD_OPTIONS.find((o) => o.value === period)?.label ?? 'Este mês';
 
   const platformInfo = PLATFORM_MAP[activePlatform] || PLATFORM_MAP.meta;
   const PlatformIcon = platformInfo.icon;

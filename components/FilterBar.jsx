@@ -10,6 +10,14 @@ const SORT_OPTIONS = [
   { value: 'cliques',      label: 'Mais cliques' },
 ];
 
+function getDefaultDates() {
+  const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  return {
+    startDate: `${todayStr.slice(0, 7)}-01`,
+    endDate: todayStr,
+  };
+}
+
 export default function FilterBar({
   filters,
   onFiltersChange,
@@ -26,24 +34,26 @@ export default function FilterBar({
   }
 
   function clearFilters() {
+    const defaultDates = getDefaultDates();
     onFiltersChange({
-      startDate: '',
-      endDate: '',
-      campaign: '',
+      startDate: defaultDates.startDate,
+      endDate:   defaultDates.endDate,
+      campaign:  '',
       accountId: '',
-      adGroup: '',
-      keyword: '',
-      sortBy: 'investimento',
+      adGroup:   '',
+      keyword:   '',
+      sortBy:    'investimento',
     });
   }
 
+  const defaultDates = getDefaultDates();
   const hasActiveFilters =
-    filters.startDate ||
-    filters.endDate ||
-    filters.campaign ||
-    filters.accountId ||
-    filters.adGroup ||
-    filters.keyword;
+    Boolean(filters.campaign) ||
+    Boolean(filters.accountId) ||
+    Boolean(filters.adGroup) ||
+    Boolean(filters.keyword) ||
+    (Boolean(filters.startDate) && filters.startDate !== defaultDates.startDate) ||
+    (Boolean(filters.endDate) && filters.endDate !== defaultDates.endDate);
 
   const isGoogleOrAll = activePlatform === 'google' || activePlatform === 'all';
   const showAccountFilter = accounts.length > 0 || isGoogleOrAll;

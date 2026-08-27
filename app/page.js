@@ -26,42 +26,42 @@ import {
 
 /** Compute startDate / endDate from a preset period key */
 function getPeriodDates(period) {
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  const firstDayOfMonth = `${todayStr.slice(0, 7)}-01`;
 
   switch (period) {
     case 'today':
-      return { startDate: today, endDate: today };
+      return { startDate: todayStr, endDate: todayStr };
 
     case '7d': {
-      const d = new Date(now);
+      const d = new Date();
       d.setDate(d.getDate() - 6);
-      return { startDate: d.toISOString().slice(0, 10), endDate: today };
+      const start = d.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+      return { startDate: start, endDate: todayStr };
     }
 
     case '30d': {
-      const d = new Date(now);
+      const d = new Date();
       d.setDate(d.getDate() - 29);
-      return { startDate: d.toISOString().slice(0, 10), endDate: today };
+      const start = d.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+      return { startDate: start, endDate: todayStr };
     }
 
-    case 'this-month': {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { startDate: start.toISOString().slice(0, 10), endDate: today };
-    }
+    case 'this-month':
+      return { startDate: firstDayOfMonth, endDate: todayStr };
 
     case 'last-month': {
-      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const end   = new Date(now.getFullYear(), now.getMonth(), 0);
-      return {
-        startDate: start.toISOString().slice(0, 10),
-        endDate:   end.toISOString().slice(0, 10),
-      };
+      const now = new Date();
+      const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastOfLastMonth  = new Date(now.getFullYear(), now.getMonth(), 0);
+      const start = firstOfLastMonth.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+      const end   = lastOfLastMonth.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+      return { startDate: start, endDate: end };
     }
 
     case 'custom':
     default:
-      return { startDate: '', endDate: '' };
+      return { startDate: firstDayOfMonth, endDate: todayStr };
   }
 }
 
@@ -84,10 +84,11 @@ export default function DashboardPage() {
   const [isRefreshing,   setIsRefreshing]   = useState(false);
 
   // ── Period + filters state ────────────────────────────
-  const [period, setPeriod] = useState('30d');
+  const initialDates = getPeriodDates('this-month');
+  const [period, setPeriod] = useState('this-month');
   const [filters, setFilters] = useState({
-    startDate: '',
-    endDate:   '',
+    startDate: initialDates.startDate,
+    endDate:   initialDates.endDate,
     campaign:  '',
     accountId: '',
     adGroup:   '',
@@ -210,15 +211,16 @@ export default function DashboardPage() {
   }
 
   function handleClearFilters() {
-    setPeriod('30d');
+    const defaultDates = getPeriodDates('this-month');
+    setPeriod('this-month');
     setFilters({
-      startDate: '',
-      endDate: '',
-      campaign: '',
+      startDate: defaultDates.startDate,
+      endDate:   defaultDates.endDate,
+      campaign:  '',
       accountId: '',
-      adGroup: '',
-      keyword: '',
-      sortBy: 'investimento',
+      adGroup:   '',
+      keyword:   '',
+      sortBy:    'investimento',
     });
   }
 
