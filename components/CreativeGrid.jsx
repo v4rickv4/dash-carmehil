@@ -19,6 +19,7 @@ export default function CreativeGrid({ campaignFilter, refreshTrigger }) {
     try {
       const params = new URLSearchParams();
       params.set('latestOnly', 'true');
+      params.set('creativesOnly', 'true');
       if (campaignFilter) params.set('campaign', campaignFilter);
 
       const res = await fetch(`/api/ads?${params.toString()}`);

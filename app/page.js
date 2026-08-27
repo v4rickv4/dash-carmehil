@@ -9,6 +9,7 @@ import KPIGrid from '@/components/KPIGrid';
 import PerformanceChart from '@/components/PerformanceChart';
 import CampaignDistribution from '@/components/CampaignDistribution';
 import CampaignTable from '@/components/CampaignTable';
+import KeywordsTable from '@/components/KeywordsTable';
 import CreativeGrid from '@/components/CreativeGrid';
 import InsightsPanel from '@/components/InsightsPanel';
 import ErrorState from '@/components/ErrorState';
@@ -72,12 +73,15 @@ export default function DashboardPage() {
   const [sidebarOpen,    setSidebarOpen]    = useState(false);
 
   // ── Data state ────────────────────────────────────────
-  const [metaRows,     setMetaRows]     = useState([]);
-  const [googleRows,   setGoogleRows]   = useState([]);
+  const [metaRows,       setMetaRows]       = useState([]);
+  const [googleRows,     setGoogleRows]     = useState([]);
   const [googleAccounts, setGoogleAccounts] = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [googleAdGroups, setGoogleAdGroups] = useState([]);
+  const [googleKeywords, setGoogleKeywords] = useState([]);
+
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState(null);
+  const [isRefreshing,   setIsRefreshing]   = useState(false);
 
   // ── Period + filters state ────────────────────────────
   const [period, setPeriod] = useState('30d');
@@ -86,6 +90,8 @@ export default function DashboardPage() {
     endDate:   '',
     campaign:  '',
     accountId: '',
+    adGroup:   '',
+    keyword:   '',
     sortBy:    'investimento',
   });
 
@@ -120,6 +126,8 @@ export default function DashboardPage() {
       if (filters.endDate)   googleParams.set('endDate',   filters.endDate);
       if (filters.campaign)  googleParams.set('campaign',  filters.campaign);
       if (filters.accountId) googleParams.set('accountId', filters.accountId);
+      if (filters.adGroup)   googleParams.set('adGroup',   filters.adGroup);
+      if (filters.keyword)   googleParams.set('keyword',   filters.keyword);
 
       const requests = [];
       if (activePlatform === 'meta' || activePlatform === 'all') {
@@ -131,7 +139,7 @@ export default function DashboardPage() {
       if (activePlatform === 'google' || activePlatform === 'all') {
         requests.push(fetch(`/api/google-ads?${googleParams.toString()}`).then((r) => r.json()));
       } else {
-        requests.push(Promise.resolve({ rows: [], accounts: [] }));
+        requests.push(Promise.resolve({ rows: [], accounts: [], adGroups: [], keywords: [] }));
       }
 
       const [metaRes, googleRes] = await Promise.all(requests);
@@ -141,6 +149,12 @@ export default function DashboardPage() {
       if (googleRes.accounts && googleRes.accounts.length > 0) {
         setGoogleAccounts(googleRes.accounts);
       }
+      if (googleRes.adGroups) {
+        setGoogleAdGroups(googleRes.adGroups);
+      }
+      if (googleRes.keywords) {
+        setGoogleKeywords(googleRes.keywords);
+      }
     } catch (err) {
       console.error('[Dashboard] Fetch error:', err);
       setError(err.message || 'Erro ao carregar dados do dashboard.');
@@ -148,7 +162,15 @@ export default function DashboardPage() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [activePlatform, filters.startDate, filters.endDate, filters.campaign, filters.accountId]);
+  }, [
+    activePlatform,
+    filters.startDate,
+    filters.endDate,
+    filters.campaign,
+    filters.accountId,
+    filters.adGroup,
+    filters.keyword,
+  ]);
 
   // Load whenever activePlatform or filter changes
   useEffect(() => {
@@ -189,11 +211,30 @@ export default function DashboardPage() {
 
   function handleClearFilters() {
     setPeriod('30d');
-    setFilters({ startDate: '', endDate: '', campaign: '', accountId: '', sortBy: 'investimento' });
+    setFilters({
+      startDate: '',
+      endDate: '',
+      campaign: '',
+      accountId: '',
+      adGroup: '',
+      keyword: '',
+      sortBy: 'investimento',
+    });
   }
 
+  /**
+   * Platform change with transition rules:
+   * - If switching to 'google' while viewing '#criativos', auto redirect to '#visao-geral'
+   * - If switching to 'meta' while viewing '#palavras-chave', auto redirect to '#visao-geral'
+   */
   function handlePlatformChange(platform) {
     setActivePlatform(platform);
+
+    if (platform === 'google' && (activeSection === 'criativos' || activeSection === 'creatives')) {
+      setActiveSection('visao-geral');
+    } else if (platform === 'meta' && (activeSection === 'palavras-chave' || activeSection === 'keywords')) {
+      setActiveSection('visao-geral');
+    }
   }
 
   /* ── Render ──────────────────────────────────────────── */
@@ -230,6 +271,8 @@ export default function DashboardPage() {
           onFiltersChange={handleFiltersChange}
           campaigns={campaignNames}
           accounts={googleAccounts}
+          adGroups={googleAdGroups}
+          keywords={googleKeywords}
           activePlatform={activePlatform}
         />
 
@@ -260,10 +303,22 @@ export default function DashboardPage() {
                 />
               </section>
 
-              {/* ── Campaign Table ── */}
-              <section id="campanhas" aria-label="Performance por campanha">
-                <CampaignTable campaignGroups={campaignGroups} loading={loading} />
+              {/* ── Campaign / AdGroup / Keyword Table ── */}
+              <section id="campanhas" aria-label="Performance por campanha, grupo e palavra-chave">
+                <CampaignTable
+                  campaignGroups={campaignGroups}
+                  rows={combinedRows}
+                  loading={loading}
+                  activePlatform={activePlatform}
+                />
               </section>
+
+              {/* ── Palavras-chave (Google Ads / Visão Consolidada) ── */}
+              {(activePlatform === 'google' || activePlatform === 'all') && (
+                <section id="palavras-chave" aria-label="Tabela de Palavras-chave">
+                  <KeywordsTable rows={googleRows} loading={loading} />
+                </section>
+              )}
 
               {/* ── Insights ── */}
               <section id="relatorios" aria-label="Insights de performance">
@@ -274,7 +329,7 @@ export default function DashboardPage() {
                 />
               </section>
 
-              {/* ── Criativos (Fixo nas últimas 24h para Meta Ads / Plataforma) ── */}
+              {/* ── Criativos (Meta Ads / Visão Consolidada) ── */}
               {(activePlatform === 'meta' || activePlatform === 'all') && (
                 <section id="criativos" aria-label="Performance dos criativos">
                   <CreativeGrid

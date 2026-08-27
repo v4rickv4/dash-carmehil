@@ -7,11 +7,13 @@ export const dynamic = 'force-dynamic';
  * GET /api/ads
  *
  * Query parameters (all optional):
- *   latestOnly YYYY-MM-DD  If 'true', returns records from MAX(data) (latest 24h)
- *   startDate  YYYY-MM-DD  Filter records from this date (inclusive)
- *   endDate    YYYY-MM-DD  Filter records up to this date (inclusive)
- *   campaign   string      Exact campaign name filter (nome_campanha)
- *   limit      number      Max rows to return (default: no limit)
+ *   latestOnly   boolean  If 'true', returns records from MAX(data) (latest 24h)
+ *   level        string   'creative' (id_anuncio IS NOT NULL) or 'campaign' (id_anuncio IS NULL)
+ *   creativesOnly boolean  If 'true', filters id_anuncio IS NOT NULL
+ *   startDate    YYYY-MM-DD Filter records from this date (inclusive)
+ *   endDate      YYYY-MM-DD Filter records up to this date (inclusive)
+ *   campaign     string   Exact campaign name filter (nome_campanha)
+ *   limit        number   Max rows to return (default: no limit)
  *
  * Returns: JSON array of records from public.dados_meta_ads_carmehil
  */
@@ -19,18 +21,20 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const latestOnly = searchParams.get('latestOnly') === 'true';
-    const startDate  = searchParams.get('startDate') || null;
-    const endDate    = searchParams.get('endDate')   || null;
-    const campaign   = searchParams.get('campaign')  || null;
-    const limitRaw   = searchParams.get('limit');
-    const limit      = limitRaw ? parseInt(limitRaw, 10) : null;
+    const latestOnly    = searchParams.get('latestOnly') === 'true';
+    const level         = searchParams.get('level');
+    const creativesOnly = searchParams.get('creativesOnly') === 'true' || level === 'creative' || latestOnly;
+    const startDate     = searchParams.get('startDate') || null;
+    const endDate       = searchParams.get('endDate')   || null;
+    const campaign      = searchParams.get('campaign')  || null;
+    const limitRaw      = searchParams.get('limit');
+    const limit         = limitRaw ? parseInt(limitRaw, 10) : null;
 
     let sql;
     let params;
 
     if (latestOnly) {
-      // Query only the most recent date in the database (last 24h)
+      // Query only the most recent date in the database (last 24h) for Creatives (id_anuncio IS NOT NULL)
       sql = `
         SELECT
           id,
@@ -53,13 +57,16 @@ export async function GET(request) {
           status
         FROM public.dados_meta_ads_carmehil
         WHERE data = (SELECT MAX(data) FROM public.dados_meta_ads_carmehil)
+          AND (${creativesOnly ? 'id_anuncio IS NOT NULL' : 'id_anuncio IS NULL'})
           AND ($1::text IS NULL OR nome_campanha = $1)
         ORDER BY investimento DESC
         ${limit ? 'LIMIT $2' : ''}
       `;
       params = limit ? [campaign, limit] : [campaign];
     } else {
-      // Standard query filtered by global date range
+      // Standard query:
+      // - Visão Geral, Performance & Gráfico Diário: id_anuncio IS NULL
+      // - Creatives: id_anuncio IS NOT NULL
       sql = `
         SELECT
           id,
@@ -85,6 +92,7 @@ export async function GET(request) {
           ($1::date IS NULL OR data >= $1::date)
           AND ($2::date IS NULL OR data <= $2::date)
           AND ($3::text IS NULL OR nome_campanha = $3)
+          AND (${creativesOnly ? 'id_anuncio IS NOT NULL' : 'id_anuncio IS NULL'})
         ORDER BY data DESC
         ${limit ? 'LIMIT $4' : ''}
       `;

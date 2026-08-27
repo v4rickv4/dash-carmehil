@@ -1,41 +1,52 @@
 'use client';
 
+import logoImg from '@/images/logo.png';
 import {
   LayoutDashboard,
   Megaphone,
-  Image,
+  Image as ImageIcon,
   BarChart3,
   FileText,
+  KeyRound,
   ChevronRight,
   X,
-  Zap,
   Globe,
   Share2,
   Layers,
 } from 'lucide-react';
 
-const platforms = [
+export const platforms = [
   { id: 'meta', label: 'Meta Ads', icon: Share2, badge: 'Facebook & IG', color: 'from-blue-600 to-indigo-600' },
   { id: 'google', label: 'Google Ads', icon: Globe, badge: 'Search & PMax', color: 'from-amber-500 to-emerald-600' },
   { id: 'all', label: 'Visão Consolidada', icon: Layers, badge: 'Todas', color: 'from-purple-600 to-blue-600' },
 ];
 
-const navItems = [
-  { id: 'visao-geral',  label: 'Visão Geral', icon: LayoutDashboard },
-  { id: 'performance',  label: 'Performance', icon: BarChart3 },
-  { id: 'campanhas',    label: 'Campanhas',   icon: Megaphone },
-  { id: 'relatorios',   label: 'Relatórios',  icon: FileText },
-  { id: 'criativos',    label: 'Criativos',   icon: Image },
+export const NAV_ITEMS = [
+  { id: 'overview', label: 'Visão Geral', icon: LayoutDashboard, href: '#visao-geral', platforms: ['meta', 'google', 'consolidated'] },
+  { id: 'performance', label: 'Performance', icon: BarChart3, href: '#performance', platforms: ['meta', 'google', 'consolidated'] },
+  { id: 'campaigns', label: 'Campanhas', icon: Megaphone, href: '#campanhas', platforms: ['meta', 'google', 'consolidated'] },
+  { id: 'keywords', label: 'Palavras-chave', icon: KeyRound, href: '#palavras-chave', platforms: ['google', 'consolidated'] },
+  { id: 'creatives', label: 'Criativos', icon: ImageIcon, href: '#criativos', platforms: ['meta', 'consolidated'] },
+  { id: 'reports', label: 'Relatórios', icon: FileText, href: '#relatorios', platforms: ['meta', 'google', 'consolidated'] },
 ];
 
 export default function Sidebar({
+  clientLogoUrl,
   activePlatform = 'meta',
   onPlatformChange,
-  activeSection,
+  activeSection = 'visao-geral',
   onSectionChange,
   isOpen,
   onClose,
+  navItems = NAV_ITEMS,
 }) {
+  const logoSrc = clientLogoUrl || process.env.NEXT_PUBLIC_CLIENT_LOGO_URL || logoImg?.src || logoImg || '/images/logo.png';
+  const platformKey = activePlatform === 'all' ? 'consolidated' : activePlatform;
+
+  const visibleNavItems = navItems.filter((item) =>
+    item.platforms.includes(platformKey)
+  );
+
   return (
     <>
       {/* Mobile backdrop overlay */}
@@ -47,37 +58,24 @@ export default function Sidebar({
 
       {/* Sidebar panel */}
       <aside className={`sidebar ${isOpen ? 'mobile-open' : ''}`} role="navigation" aria-label="Menu principal">
-        {/* Logo area */}
-        <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="https://carmehil.com.br/wp-content/uploads/2023/05/logo-carmehil.png"
-                alt="Carmehil"
-                className="h-8 w-auto object-contain"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-              <div
-                className="hidden items-center gap-2 text-white font-extrabold text-base tracking-wide"
-                aria-hidden="true"
-              >
-                <div className="p-1.5 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center shadow-md">
-                  <Zap size={16} fill="currentColor" />
-                </div>
-                <span className="bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
-                  CARMEHIL
-                </span>
-              </div>
-            </div>
+        {/* Header de Logo por Imagem Dinâmica */}
+        <div className="flex items-center justify-between px-4 py-6 border-b border-slate-800/60">
+          <div className="flex-1 flex items-center justify-center min-w-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={typeof logoSrc === 'string' ? logoSrc : logoSrc?.src}
+              alt="Logo"
+              className="h-10 w-auto max-w-full object-contain"
+              onError={(e) => {
+                // Fallback discreto caso ocorra erro no carregamento
+                e.currentTarget.style.display = 'none';
+              }}
+            />
           </div>
           {/* Mobile close button */}
           <button
             onClick={onClose}
-            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0 ml-2"
             aria-label="Fechar menu"
           >
             <X size={18} />
@@ -100,7 +98,7 @@ export default function Sidebar({
                 key={p.id}
                 onClick={() => {
                   if (onPlatformChange) onPlatformChange(p.id);
-                  onClose();
+                  if (onClose) onClose();
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all border ${
                   isActive
@@ -131,32 +129,31 @@ export default function Sidebar({
           </span>
         </div>
 
-        <nav className="flex-1 px-3 space-y-1">
-          {navItems.map(({ id, label, icon: Icon }) => (
-            <a
-              key={id}
-              href={`#${id}`}
-              onClick={() => {
-                onSectionChange(id);
-                onClose();
-              }}
-              className={`sidebar-nav-item ${activeSection === id ? 'active' : ''}`}
-              aria-current={activeSection === id ? 'page' : undefined}
-            >
-              <Icon size={18} className="flex-shrink-0" />
-              <span className="flex-1">{label}</span>
-              {activeSection === id && (
-                <ChevronRight size={14} className="opacity-60" />
-              )}
-            </a>
-          ))}
-        </nav>
+        <nav className="flex-1 px-3 space-y-1 pb-6">
+          {visibleNavItems.map(({ id, label, icon: Icon, href }) => {
+            const targetSection = href.replace('#', '');
+            const isActive = activeSection === targetSection || activeSection === id;
 
-        {/* Footer info */}
-        <div className="px-5 py-4 border-t border-white/10 mt-auto">
-          <p className="text-xs text-slate-400 font-medium">Dashboard Multi-Plataforma</p>
-          <p className="text-xs text-slate-600 mt-0.5">Carmehil Network &copy; 2026</p>
-        </div>
+            return (
+              <a
+                key={id}
+                href={href}
+                onClick={() => {
+                  if (onSectionChange) onSectionChange(targetSection);
+                  if (onClose) onClose();
+                }}
+                className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <Icon size={18} className="flex-shrink-0" />
+                <span className="flex-1">{label}</span>
+                {isActive && (
+                  <ChevronRight size={14} className="opacity-60" />
+                )}
+              </a>
+            );
+          })}
+        </nav>
       </aside>
     </>
   );
