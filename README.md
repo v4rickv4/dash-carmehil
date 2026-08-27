@@ -237,3 +237,4 @@ CREATE TABLE dados_meta_ads_carmehil (
 - Erros internos são logados no servidor, nunca expostos ao browser
 - `.env.local` está no `.gitignore`
 # dash-carmehil
+# dash-carmehil
